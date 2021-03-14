@@ -1,5 +1,6 @@
 import itertools
 import tkinter as tk
+from tkinter import messagebox
 from collections import namedtuple
 from dataclasses import dataclass, field
 from typing import Optional
@@ -27,7 +28,7 @@ class GameData:
 
     def shuffle(self) -> PermutationType:
         while permutation := Permutation.random(self.total_number_of_cells - 1):
-            if permutation.is_odd:
+            if permutation.is_even:
                 break
 
         self.permutation = list(map(lambda x: x + 1, permutation))
@@ -52,7 +53,7 @@ class GameData:
         return empty_cell_position
 
     def check_if_game_won(self):
-        return self.permutation == list(range(1, self.total_number_of_cells + 1)) + [None]
+        return self.permutation == list(range(1, self.total_number_of_cells)) + [None]
 
 
 game_data = GameData(4, 4)
@@ -64,7 +65,7 @@ class Application(tk.Frame):
         self.master = master
         self.buttons = {}
         self.create_widgets()
-        self.pack()
+        self.pack(expand=True, fill='both')
 
     def create_widgets(self):
         for i in range(game_data.rows + 1):
@@ -80,8 +81,8 @@ class Application(tk.Frame):
 
         new = tk.Button(self, text='New', command=self.shuffle)
         quit = tk.Button(self, text='Exit', command=exit)
-        new.grid(row=game_data.rows, column=0)
-        quit.grid(row=game_data.rows, column=1)
+        new.grid(row=game_data.rows, column=0, sticky=tk.N + tk.E + tk.S + tk.W)
+        quit.grid(row=game_data.rows, column=1, sticky=tk.N + tk.E + tk.S + tk.W)
 
     def make_move(self, button, position):
         print(f'Clicked {position}')
@@ -93,6 +94,8 @@ class Application(tk.Frame):
         )
         button['command'] = lambda button=button, position=GameData.Position(new_row, new_column): \
             self.make_move(button, position)
+
+        self.check_if_game_won()
 
     def shuffle(self):
         game_data.shuffle()
@@ -106,8 +109,10 @@ class Application(tk.Frame):
                 self.make_move(button, position)
             button.grid(row=row, column=column, sticky=tk.N + tk.E + tk.S + tk.W)
 
-    def say_hi(self):
-        print("hi there, everyone!")
+    def check_if_game_won(self):
+        if game_data.check_if_game_won():
+            tk.messagebox.showinfo(message='You win!')
+            self.shuffle()
 
 
 root = tk.Tk()
