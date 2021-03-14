@@ -62,6 +62,7 @@ class Application(tk.Frame):
     def __init__(self, master=None):
         super().__init__(master)
         self.master = master
+        self.buttons = {}
         self.create_widgets()
         self.pack()
 
@@ -71,16 +72,13 @@ class Application(tk.Frame):
         for i in range(game_data.columns):
             self.grid_columnconfigure(i, weight=1, uniform='col')
 
-        for value, (row, column) in \
-                zip(game_data.permutation, itertools.product(range(game_data.rows), range(game_data.columns))):
-            if value is None:
-                continue
-            button = tk.Button(self, text=str(value))
-            button['command'] = lambda button=button, position=GameData.Position(row, column): \
-                self.make_move(button, position)
-            button.grid(row=row, column=column, sticky=tk.N + tk.E + tk.S + tk.W)
+        for i in range(1, game_data.total_number_of_cells):
+            button = tk.Button(self, text=str(i))
+            self.buttons[i] = button
 
-        new = tk.Button(self, text='New', command=lambda: print('New'))
+        self.shuffle()
+
+        new = tk.Button(self, text='New', command=self.shuffle)
         quit = tk.Button(self, text='Exit', command=exit)
         new.grid(row=game_data.rows, column=0)
         quit.grid(row=game_data.rows, column=1)
@@ -97,7 +95,16 @@ class Application(tk.Frame):
             self.make_move(button, position)
 
     def shuffle(self):
-        pass
+        game_data.shuffle()
+
+        for value, (row, column) in \
+                zip(game_data.permutation, itertools.product(range(game_data.rows), range(game_data.columns))):
+            if value is None:
+                continue
+            button = self.buttons.get(value)
+            button['command'] = lambda button=button, position=GameData.Position(row, column): \
+                self.make_move(button, position)
+            button.grid(row=row, column=column, sticky=tk.N + tk.E + tk.S + tk.W)
 
     def say_hi(self):
         print("hi there, everyone!")
