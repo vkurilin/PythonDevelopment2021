@@ -1,19 +1,61 @@
+import itertools
 import tkinter as tk
-from dataclasses import dataclass
-import random
+from collections import namedtuple
+from dataclasses import dataclass, field
+from typing import Optional
+
 from sympy.combinatorics.permutations import Permutation
 
 
-@dataclass
 class GameData:
+    Position = namedtuple('Position', ['row', 'column'])
+    PermutationType = list[Optional[int]]
+
     rows: int
     columns: int
-    permutation: list[int]
+    permutation: PermutationType = []
+    empty_cell_index: int = 0
 
-    def check_parity_of_permutation(self) -> bool:
-        return True
+    def __init__(self, rows, columns):
+        self.rows = rows
+        self.columns = columns
+        self.shuffle()
 
-game_data = GameData(4, 4, [])
+    @property
+    def total_number_of_cells(self) -> int:
+        return self.rows * self.columns
+
+    def shuffle(self) -> PermutationType:
+        while permutation := Permutation.random(self.total_number_of_cells - 1):
+            if permutation.is_odd:
+                break
+
+        self.permutation = list(map(lambda x: x + 1, permutation))
+        self.permutation.append(None)
+        self.empty_cell_index = 15
+        return self.permutation
+
+    def make_move(self, position: Position) -> Position:
+        row, column = position
+        index = row * self.columns + column
+
+        empty_cell_position = GameData.Position(*divmod(self.empty_cell_index, self.columns))
+        kek = abs(empty_cell_position.row - row) + abs(empty_cell_position.column - column)
+        if abs(empty_cell_position.row - row) + abs(empty_cell_position.column - column) != 1:
+            return position
+
+        self.permutation[index], self.permutation[self.empty_cell_index] = \
+            self.permutation[self.empty_cell_index], self.permutation[index]
+
+        self.empty_cell_index = index
+
+        return empty_cell_position
+
+    def check_if_game_won(self):
+        return self.permutation == list(range(1, self.total_number_of_cells + 1)) + [None]
+
+
+game_data = GameData(4, 4)
 
 
 class Application(tk.Frame):
@@ -29,16 +71,33 @@ class Application(tk.Frame):
         for i in range(game_data.columns):
             self.grid_columnconfigure(i, weight=1, uniform='col')
 
-        for row in range(game_data.rows):
-            for column in range(game_data.columns):
-                button = tk.Button(self, text=str(row)+str(column))
-                button['command'] = lambda button=button, row=row, column=column: print(f'Hey, {row, column}')
-                button.grid(row=row, column=column, sticky=tk.N + tk.E + tk.S + tk.W)
+        for value, (row, column) in \
+                zip(game_data.permutation, itertools.product(range(game_data.rows), range(game_data.columns))):
+            if value is None:
+                continue
+            button = tk.Button(self, text=str(value))
+            button['command'] = lambda button=button, position=GameData.Position(row, column): \
+                self.make_move(button, position)
+            button.grid(row=row, column=column, sticky=tk.N + tk.E + tk.S + tk.W)
 
         new = tk.Button(self, text='New', command=lambda: print('New'))
         quit = tk.Button(self, text='Exit', command=exit)
         new.grid(row=game_data.rows, column=0)
         quit.grid(row=game_data.rows, column=1)
+
+    def make_move(self, button, position):
+        print(f'Clicked {position}')
+        new_row, new_column = game_data.make_move(position)
+        button.grid(
+            row=new_row,
+            column=new_column,
+            sticky=tk.N + tk.E + tk.S + tk.W
+        )
+        button['command'] = lambda button=button, position=GameData.Position(new_row, new_column): \
+            self.make_move(button, position)
+
+    def shuffle(self):
+        pass
 
     def say_hi(self):
         print("hi there, everyone!")
